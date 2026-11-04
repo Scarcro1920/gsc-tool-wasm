@@ -1,5 +1,5 @@
 
-name: Compile GSC Tool for Chrome
+name: Build GSC Tool WASM64
 
 on:
   workflow_dispatch:
@@ -18,7 +18,7 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
-      - name: Install Emscripten
+      - name: Setup Emscripten
         uses: emscripten-core/setup-emsdk@v15
 
       - name: Install dependencies
@@ -41,14 +41,8 @@ jobs:
           git submodule update --init --recursive
           premake5 gmake2
 
-      - name: Compile with Emscripten
-        id: compile
-        continue-on-error: true
+      - name: Compile GSC Tool
         run: |
-          mkdir -p output
-
-          set -o pipefail
-
           make -C build \
             config=release_amd64 \
             -j2 \
@@ -56,25 +50,22 @@ jobs:
             CXX=em++ \
             AR=emar \
             RANLIB=emranlib \
-            LDFLAGS="-sWASM=1 -sMODULARIZE=1 -sEXPORT_ES6=1 -sENVIRONMENT=web -sALLOW_MEMORY_GROWTH=1 -sFORCE_FILESYSTEM=1" \
-            2>&1 | tee output/compile.log
+            LDFLAGS="-sMODULARIZE=1 -sEXPORT_ES6=1 -sENVIRONMENT=web -sALLOW_MEMORY_GROWTH=1 -sFORCE_FILESYSTEM=1 -sEXPORTED_RUNTIME_METHODS=FS,callMain"
 
-      - name: Collect generated files
-        if: always()
+      - name: Prepare Chrome files
         run: |
-          mkdir -p output/files
+          mkdir -p dist
 
-          find build -type f \
-            \( -name "*.wasm" -o -name "*.js" -o -name "gsc-tool" \) \
-            -exec cp --parents {} output/files/ \; || true
+          cp build/bin/amd64/release/gsc-tool dist/gsc-tool.js
+          cp build/bin/amd64/release/gsc-tool.wasm dist/gsc-tool.wasm
 
-          echo "Compilation finished." > output/status.txt
+          ls -lh dist/
 
-          em++ --version > output/compiler.txt
+          test -s dist/gsc-tool.js
+          test -s dist/gsc-tool.wasm
 
-      - name: Upload compilation results
-        if: always()
+      - name: Upload Chrome engine
         uses: actions/upload-artifact@v4
         with:
-          name: gsc-tool-wasm-attempt
-          path: output/
+          name: gsc-tool-chrome-wasm64
+          path: dist/
