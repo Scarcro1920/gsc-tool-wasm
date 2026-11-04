@@ -4,16 +4,14 @@ name: Build GSC Tool WASM
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
   build:
-    name: Prepare IW8 WebAssembly
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout GSC Tool source
+      - name: Checkout GSC Tool
         uses: actions/checkout@v4
         with:
           repository: xensik/gsc-tool
@@ -23,47 +21,52 @@ jobs:
       - name: Setup Emscripten
         uses: emscripten-core/setup-emsdk@v15
 
-      - name: Check compiler
+      - name: Install Premake 5
         run: |
-          echo "Checking Emscripten..."
+          curl -L \
+            https://github.com/premake/premake-core/releases/download/v5.0.0-beta2/premake-5.0.0-beta2-linux.tar.gz \
+            -o premake.tar.gz
+
+          tar -xzf premake.tar.gz
+
+          chmod +x premake5
+          sudo mv premake5 /usr/local/bin/premake5
+
+          premake5 --version
+
+      - name: Check tools
+        run: |
           em++ --version
-          echo "Checking CMake..."
           cmake --version
-          echo "Checking Ninja..."
-          ninja --version
-          echo "Checking emcmake..."
-          command -v emcmake
-          emcmake cmake --version
+          make --version
+          premake5 --version
 
-      - name: Inspect GSC Tool source
+      - name: Generate GSC Tool build files
         run: |
-          echo "Project files:"
-          ls -la
+          git submodule update --init --recursive
+          premake5 gmake2
 
-          echo "Build configuration files:"
-          find . -maxdepth 4 \
-            \( -name "CMakeLists.txt" \
-            -o -name "premake5.lua" \
-            -o -name "Makefile" \) \
-            -print
+      - name: Inspect generated projects
+        run: |
+          echo "Generated build files:"
+          find build -maxdepth 4 -type f | head -100
 
-          echo "C++ source files:"
-          find src -type f -name "*.cpp" | head -50
+          echo "Available projects:"
+          find build -name "*.make" -o -name "Makefile"
 
-      - name: Prepare build information
+      - name: Save build configuration
         run: |
           mkdir -p output
 
-          cp README.md output/README.md
-          em++ --version > output/compiler.txt
+          tar -czf output/gsc-build-files.tar.gz build
+
+          em++ --version > output/emscripten-version.txt
           git rev-parse HEAD > output/source-commit.txt
 
-          echo "IW8" > output/target-game.txt
-          echo "Environment check successful" > output/status.txt
+          echo "Premake generation successful" > output/status.txt
 
-      - name: Upload build information
+      - name: Upload build configuration
         uses: actions/upload-artifact@v4
         with:
-          name: gsc-tool-wasm-build-info
+          name: gsc-tool-generated-build
           path: output/
-          if-no-files-found: error
