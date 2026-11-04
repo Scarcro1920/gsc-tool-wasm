@@ -1,0 +1,45 @@
+
+name: Build GSC Tool WASM
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout GSC Tool
+        uses: actions/checkout@v4
+        with:
+          repository: xensik/gsc-tool
+          submodules: recursive
+
+      - name: Setup Emscripten
+        uses: emscripten-core/setup-emsdk@v15
+
+      - name: Check compiler
+        run: |
+          em++ --version
+          emcmake --version
+
+      - name: Inspect build system
+        run: |
+          ls -la
+          find . -maxdepth 3 \
+            \( -name "CMakeLists.txt" -o -name "premake5.lua" \)
+
+      - name: Save source and build information
+        run: |
+          mkdir -p output
+          cp README.md output/
+          em++ --version > output/compiler.txt
+          git rev-parse HEAD > output/source-commit.txt
+
+      - name: Upload build preparation
+        uses: actions/upload-artifact@v4
+        with:
+          name: gsc-tool-build-info
+          path: output/
