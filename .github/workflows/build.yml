@@ -1,5 +1,5 @@
 
-name: Build GSC Tool WASM
+name: Compile GSC Tool for Chrome
 
 on:
   workflow_dispatch:
@@ -11,62 +11,70 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout GSC Tool
+      - name: Download GSC Tool
         uses: actions/checkout@v4
         with:
           repository: xensik/gsc-tool
           submodules: recursive
           fetch-depth: 0
 
-      - name: Setup Emscripten
+      - name: Install Emscripten
         uses: emscripten-core/setup-emsdk@v15
 
-      - name: Install Premake 5
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential make curl tar
+
+      - name: Install Premake
         run: |
           curl -L \
-            https://github.com/premake/premake-core/releases/download/v5.0.0-beta2/premake-5.0.0-beta2-linux.tar.gz \
+            https://github.com/premake/premake-core/releases/download/v5.0.0-beta8/premake-5.0.0-beta8-linux.tar.gz \
             -o premake.tar.gz
 
           tar -xzf premake.tar.gz
-
           chmod +x premake5
           sudo mv premake5 /usr/local/bin/premake5
 
-          premake5 --version
-
-      - name: Check tools
-        run: |
-          em++ --version
-          cmake --version
-          make --version
-          premake5 --version
-
-      - name: Generate GSC Tool build files
+      - name: Generate build files
         run: |
           git submodule update --init --recursive
           premake5 gmake2
 
-      - name: Inspect generated projects
-        run: |
-          echo "Generated build files:"
-          find build -maxdepth 4 -type f | head -100
-
-          echo "Available projects:"
-          find build -name "*.make" -o -name "Makefile"
-
-      - name: Save build configuration
+      - name: Compile with Emscripten
+        id: compile
+        continue-on-error: true
         run: |
           mkdir -p output
 
-          tar -czf output/gsc-build-files.tar.gz build
+          set -o pipefail
 
-          em++ --version > output/emscripten-version.txt
-          git rev-parse HEAD > output/source-commit.txt
+          make -C build \
+            config=release_amd64 \
+            -j2 \
+            CC=emcc \
+            CXX=em++ \
+            AR=emar \
+            RANLIB=emranlib \
+            LDFLAGS="-sWASM=1 -sMODULARIZE=1 -sEXPORT_ES6=1 -sENVIRONMENT=web -sALLOW_MEMORY_GROWTH=1 -sFORCE_FILESYSTEM=1" \
+            2>&1 | tee output/compile.log
 
-          echo "Premake generation successful" > output/status.txt
+      - name: Collect generated files
+        if: always()
+        run: |
+          mkdir -p output/files
 
-      - name: Upload build configuration
+          find build -type f \
+            \( -name "*.wasm" -o -name "*.js" -o -name "gsc-tool" \) \
+            -exec cp --parents {} output/files/ \; || true
+
+          echo "Compilation finished." > output/status.txt
+
+          em++ --version > output/compiler.txt
+
+      - name: Upload compilation results
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: gsc-tool-generated-build
+          name: gsc-tool-wasm-attempt
           path: output/
