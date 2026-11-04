@@ -4,42 +4,66 @@ name: Build GSC Tool WASM
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
   build:
+    name: Prepare IW8 WebAssembly
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout GSC Tool
+      - name: Checkout GSC Tool source
         uses: actions/checkout@v4
         with:
           repository: xensik/gsc-tool
           submodules: recursive
+          fetch-depth: 0
 
       - name: Setup Emscripten
         uses: emscripten-core/setup-emsdk@v15
 
       - name: Check compiler
         run: |
+          echo "Checking Emscripten..."
           em++ --version
-          emcmake --version
+          emcmake --help
+          cmake --version
+          ninja --version
 
-      - name: Inspect build system
+      - name: Inspect GSC Tool source
         run: |
+          echo "Project files:"
           ls -la
-          find . -maxdepth 3 \
-            \( -name "CMakeLists.txt" -o -name "premake5.lua" \)
 
-      - name: Save source and build information
+          echo "Build configuration files:"
+          find . -maxdepth 4 \
+            \( -name "CMakeLists.txt" \
+            -o -name "premake5.lua" \
+            -o -name "Makefile" \) \
+            -print
+
+          echo "C++ source files:"
+          find src -type f -name "*.cpp" | head -50
+
+      - name: Prepare build information
         run: |
           mkdir -p output
-          cp README.md output/
+
+          cp README.md output/README.md
+
           em++ --version > output/compiler.txt
+
           git rev-parse HEAD > output/source-commit.txt
 
-      - name: Upload build preparation
+          echo "IW8" > output/target-game.txt
+
+          echo "WebAssembly preparation successful" \
+            > output/status.txt
+
+      - name: Upload build information
         uses: actions/upload-artifact@v4
         with:
-          name: gsc-tool-build-info
+          name: gsc-tool-wasm-build-info
           path: output/
+          if-no-files-found: error
