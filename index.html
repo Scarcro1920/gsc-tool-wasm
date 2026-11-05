@@ -20,31 +20,43 @@ button:disabled { opacity:.5; cursor:wait; }
 #status { padding:10px 12px; border-radius:8px; background:#101725; }
 #log { min-height:150px; max-height:340px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; background:#080c13; border:1px solid #273247; padding:13px; border-radius:8px; color:#b8c8df; }
 #download { display:none; margin-top:12px; text-align:center; text-decoration:none; background:#16794b; color:white; padding:12px; border-radius:8px; font-weight:700; }
-@media(max-width:650px) { body{padding:14px} .grid{grid-template-columns:1fr} }
+.language-row { display:flex; align-items:center; justify-content:flex-end; gap:10px; margin-bottom:12px; }
+.language-row label { margin:0; white-space:nowrap; }
+.language-row select { width:auto; min-width:150px; }
+@media(max-width:650px) { body{padding:14px} .grid{grid-template-columns:1fr} .language-row{justify-content:stretch} .language-row select{flex:1} }
 </style>
 </head>
 <body>
 <main>
+<div class="language-row">
+  <label for="language" data-i18n="languageLabel">Langue</label>
+  <select id="language" aria-label="Language">
+    <option value="fr">Français</option>
+    <option value="en">English</option>
+    <option value="ru">Русский</option>
+  </select>
+</div>
+
 <section class="panel">
 <h1>IW8 GSC Studio</h1>
-<div class="muted">GSC Tool · WebAssembly · Traitement local dans le navigateur</div>
+<div class="muted" data-i18n="subtitle">GSC Tool · WebAssembly · Traitement local dans le navigateur</div>
 <p id="status">Chargement du moteur WebAssembly...</p>
 </section>
 
 <section class="panel">
 <div class="grid">
 <div>
-<label for="mode">Opération</label>
+<label for="mode" data-i18n="operation">Opération</label>
 <select id="mode">
-<option value="decomp">Décompiler (.gscbin → .gsc)</option>
-<option value="comp">Compiler (.gsc → .gscbin)</option>
-<option value="disasm">Désassembler (.gscbin → .gscasm)</option>
-<option value="asm">Assembler (.gscasm → .gscbin)</option>
-<option value="parse">Analyser (.gsc)</option>
+<option value="decomp" data-i18n="decomp">Décompiler (.gscbin → .gsc)</option>
+<option value="comp" data-i18n="comp">Compiler (.gsc → .gscbin)</option>
+<option value="disasm" data-i18n="disasm">Désassembler (.gscbin → .gscasm)</option>
+<option value="asm" data-i18n="asm">Assembler (.gscasm → .gscbin)</option>
+<option value="parse" data-i18n="parse">Analyser (.gsc)</option>
 </select>
 </div>
 <div>
-<label for="system">Système IW8</label>
+<label for="system" data-i18n="system">Système IW8</label>
 <select id="system">
 <option value="pc">PC</option>
 <option value="ps4">PlayStation 4</option>
@@ -54,15 +66,15 @@ button:disabled { opacity:.5; cursor:wait; }
 </select>
 </div>
 </div>
-<label for="file">Fichier source</label>
+<label for="file" data-i18n="sourceFile">Fichier source</label>
 <input id="file" type="file" accept=".gscbin,.gsc,.gscasm,.txt,*/*">
-<p class="muted">Le fichier est traité localement dans le système de fichiers virtuel du moteur.</p>
-<button id="run" disabled>Lancer le moteur</button>
-<a id="download" download>Télécharger le résultat</a>
+<p class="muted" data-i18n="localNote">Le fichier est traité localement dans le système de fichiers virtuel du moteur.</p>
+<button id="run" disabled data-i18n="run">Lancer le moteur</button>
+<a id="download" download></a>
 </section>
 
 <section class="panel">
-<strong>Console</strong>
+<strong data-i18n="console">Console</strong>
 <pre id="log">Initialisation...</pre>
 </section>
 </main>
@@ -70,21 +82,151 @@ button:disabled { opacity:.5; cursor:wait; }
 <script type="module">
 import createGscTool from "./gsc-tool.js";
 
+const translations = {
+  fr: {
+    languageLabel:"Langue",
+    subtitle:"GSC Tool · WebAssembly · Traitement local dans le navigateur",
+    loading:"Chargement du moteur WebAssembly...",
+    operation:"Opération",
+    decomp:"Décompiler (.gscbin → .gsc)",
+    comp:"Compiler (.gsc → .gscbin)",
+    disasm:"Désassembler (.gscbin → .gscasm)",
+    asm:"Assembler (.gscasm → .gscbin)",
+    parse:"Analyser (.gsc)",
+    system:"Système IW8",
+    sourceFile:"Fichier source",
+    localNote:"Le fichier est traité localement dans le système de fichiers virtuel du moteur.",
+    run:"Lancer le moteur",
+    console:"Console",
+    initializing:"Initialisation...",
+    engineFiles:"Chargement de gsc-tool.js et gsc-tool.wasm...",
+    engineReady:"Moteur chargé. Choisis un fichier et une opération.",
+    engineReadyLog:"Moteur prêt. FS et callMain sont accessibles.",
+    engineFailed:"Échec du chargement du moteur.",
+    missingExports:"Le moteur ne fournit pas FS ou callMain. Vérifie les exports Emscripten.",
+    chooseFile:"Choisis d'abord un fichier.",
+    processing:"Traitement en cours...",
+    imported:"Fichier importé : ",
+    command:"Commande : ",
+    returnCode:"Code de retour : ",
+    noOutput:"Aucun fichier de sortie détecté. Fichiers trouvés :",
+    finishedNoResult:"Commande terminée, mais aucun résultat détecté.",
+    download:"Télécharger ",
+    result:"Résultat : ",
+    size:"Taille : ",
+    done:"Opération terminée. Ton fichier est prêt.",
+    processingError:"Erreur pendant le traitement.",
+    error:"[ERREUR] "
+  },
+  en: {
+    languageLabel:"Language",
+    subtitle:"GSC Tool · WebAssembly · Local processing in your browser",
+    loading:"Loading WebAssembly engine...",
+    operation:"Operation",
+    decomp:"Decompile (.gscbin → .gsc)",
+    comp:"Compile (.gsc → .gscbin)",
+    disasm:"Disassemble (.gscbin → .gscasm)",
+    asm:"Assemble (.gscasm → .gscbin)",
+    parse:"Parse (.gsc)",
+    system:"IW8 platform",
+    sourceFile:"Source file",
+    localNote:"The file is processed locally in the engine's virtual file system.",
+    run:"Run engine",
+    console:"Console",
+    initializing:"Initializing...",
+    engineFiles:"Loading gsc-tool.js and gsc-tool.wasm...",
+    engineReady:"Engine loaded. Choose a file and an operation.",
+    engineReadyLog:"Engine ready. FS and callMain are available.",
+    engineFailed:"Failed to load the engine.",
+    missingExports:"The engine does not provide FS or callMain. Check the Emscripten exports.",
+    chooseFile:"Choose a file first.",
+    processing:"Processing...",
+    imported:"File imported: ",
+    command:"Command: ",
+    returnCode:"Exit code: ",
+    noOutput:"No output file detected. Files found:",
+    finishedNoResult:"Command finished, but no output was detected.",
+    download:"Download ",
+    result:"Output: ",
+    size:"Size: ",
+    done:"Operation completed. Your file is ready.",
+    processingError:"An error occurred during processing.",
+    error:"[ERROR] "
+  },
+  ru: {
+    languageLabel:"Язык",
+    subtitle:"GSC Tool · WebAssembly · Локальная обработка в браузере",
+    loading:"Загрузка движка WebAssembly...",
+    operation:"Операция",
+    decomp:"Декомпиляция (.gscbin → .gsc)",
+    comp:"Компиляция (.gsc → .gscbin)",
+    disasm:"Дизассемблирование (.gscbin → .gscasm)",
+    asm:"Ассемблирование (.gscasm → .gscbin)",
+    parse:"Анализ (.gsc)",
+    system:"Платформа IW8",
+    sourceFile:"Исходный файл",
+    localNote:"Файл обрабатывается локально в виртуальной файловой системе движка.",
+    run:"Запустить движок",
+    console:"Консоль",
+    initializing:"Инициализация...",
+    engineFiles:"Загрузка gsc-tool.js и gsc-tool.wasm...",
+    engineReady:"Движок загружен. Выберите файл и операцию.",
+    engineReadyLog:"Движок готов. FS и callMain доступны.",
+    engineFailed:"Не удалось загрузить движок.",
+    missingExports:"Движок не предоставляет FS или callMain. Проверьте экспорты Emscripten.",
+    chooseFile:"Сначала выберите файл.",
+    processing:"Обработка...",
+    imported:"Файл импортирован: ",
+    command:"Команда: ",
+    returnCode:"Код возврата: ",
+    noOutput:"Выходной файл не найден. Найденные файлы:",
+    finishedNoResult:"Команда завершена, но результат не обнаружен.",
+    download:"Скачать ",
+    result:"Результат: ",
+    size:"Размер: ",
+    done:"Операция завершена. Файл готов.",
+    processingError:"Ошибка во время обработки.",
+    error:"[ОШИБКА] "
+  }
+};
+
 const statusEl = document.getElementById("status");
 const logEl = document.getElementById("log");
 const runBtn = document.getElementById("run");
 const fileInput = document.getElementById("file");
 const downloadEl = document.getElementById("download");
+const languageSelect = document.getElementById("language");
 
+let currentLanguage = "fr";
 let GSC = null;
 let jobNumber = 0;
+let currentStatusKey = "loading";
+let statusIsGood = false;
 
+function t(key) {
+  return translations[currentLanguage][key] ?? translations.en[key] ?? key;
+}
+function setLanguage(language) {
+  currentLanguage = translations[language] ? language : "fr";
+  document.documentElement.lang = currentLanguage;
+  document.querySelectorAll("[data-i18n]").forEach(element => {
+    const key = element.dataset.i18n;
+    element.textContent = t(key);
+  });
+  statusEl.textContent = t(currentStatusKey);
+  statusEl.style.color = statusIsGood ? "#67e5a2" : "#ffca75";
+  if (downloadEl.style.display === "block" && downloadEl.download) {
+    downloadEl.textContent = t("download") + downloadEl.download;
+  }
+}
 function log(message) {
   logEl.textContent += String(message) + "\n";
   logEl.scrollTop = logEl.scrollHeight;
 }
-function setStatus(message, good = false) {
-  statusEl.textContent = message;
+function setStatus(key, good = false) {
+  currentStatusKey = key;
+  statusIsGood = good;
+  statusEl.textContent = t(key);
   statusEl.style.color = good ? "#67e5a2" : "#ffca75";
 }
 function safeName(name) {
@@ -115,9 +257,12 @@ function outputExtension(mode) {
   return ({decomp:".gsc", comp:".gscbin", disasm:".gscasm", asm:".gscbin", parse:".gsc"})[mode];
 }
 
+languageSelect.addEventListener("change", () => setLanguage(languageSelect.value));
+setLanguage("fr");
+
 try {
   logEl.textContent = "";
-  log("Chargement de gsc-tool.js et gsc-tool.wasm...");
+  log(t("engineFiles"));
   GSC = await createGscTool({
     noInitialRun: true,
     locateFile: (path) => new URL(path, import.meta.url).href,
@@ -126,22 +271,22 @@ try {
   });
 
   if (!GSC.FS || typeof GSC.callMain !== "function") {
-    throw new Error("Le moteur ne fournit pas FS ou callMain. Vérifie les exports Emscripten.");
+    throw new Error(t("missingExports"));
   }
 
   window.GSC = GSC;
   runBtn.disabled = false;
-  setStatus("Moteur chargé. Choisis un fichier et une opération.", true);
-  log("Moteur prêt. FS et callMain sont accessibles.");
+  setStatus("engineReady", true);
+  log(t("engineReadyLog"));
 } catch (error) {
-  setStatus("Échec du chargement du moteur.");
+  setStatus("engineFailed");
   log(error?.stack || error);
 }
 
 runBtn.addEventListener("click", async () => {
   if (!GSC) return;
   const file = fileInput.files?.[0];
-  if (!file) { setStatus("Choisis d'abord un fichier."); return; }
+  if (!file) { setStatus("chooseFile"); return; }
 
   runBtn.disabled = true;
   downloadEl.style.display = "none";
@@ -162,21 +307,21 @@ runBtn.addEventListener("click", async () => {
     const bytes = new Uint8Array(await file.arrayBuffer());
     FS.writeFile(inputPath, bytes);
 
-    log("Fichier importé : " + name + " (" + bytes.length + " octets)");
-    log("Commande : gsc-tool -m " + mode + " -g iw8 -s " + system + " " + inputPath);
-    setStatus("Traitement en cours...");
+    log(t("imported") + name + " (" + bytes.length + " bytes)");
+    log(t("command") + "gsc-tool -m " + mode + " -g iw8 -s " + system + " " + inputPath);
+    setStatus("processing");
 
     const resultCode = GSC.callMain(["-m", mode, "-g", "iw8", "-s", system, inputPath]);
-    log("Code de retour : " + resultCode);
+    log(t("returnCode") + resultCode);
 
     const candidates = walkFiles(FS, jobDir).filter(path =>
       path.toLowerCase().endsWith(ext) && path !== inputPath
     );
 
     if (!candidates.length) {
-      log("Aucun fichier de sortie détecté. Fichiers trouvés :");
+      log(t("noOutput"));
       walkFiles(FS, jobDir).forEach(path => log("  " + path));
-      setStatus("Commande terminée, mais aucun résultat détecté.");
+      setStatus("finishedNoResult");
       return;
     }
 
@@ -188,17 +333,22 @@ runBtn.addEventListener("click", async () => {
 
     downloadEl.href = url;
     downloadEl.download = outputName;
-    downloadEl.textContent = "Télécharger " + outputName;
+    downloadEl.textContent = t("download") + outputName;
     downloadEl.style.display = "block";
 
-    log("Résultat : " + outputPath);
-    log("Taille : " + outputBytes.length + " octets");
-    setStatus("Opération terminée. Ton fichier est prêt.", true);
+    log(t("result") + outputPath);
+    log(t("size") + outputBytes.length + " bytes");
+    setStatus("done", true);
   } catch (error) {
-    log("[ERREUR] " + (error?.stack || error));
-    setStatus("Erreur pendant le traitement.");
+    log(t("error") + (error?.stack || error));
+    setStatus("processingError");
   } finally {
     runBtn.disabled = false;
+    FSRestoreDirectory();
+  }
+
+  function FSRestoreDirectory() {
+    try { GSC.FS.chdir("/"); } catch {}
   }
 });
 </script>
